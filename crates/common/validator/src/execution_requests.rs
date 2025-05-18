@@ -71,8 +71,8 @@ async fn prepare_execution_payload(state: BeaconState,
         safe_block_hash: safe_block_hash,
         finalized_block_hash: finalized_block_hash,
     };
-    return execution_engine.engine_forkchoice_updated_v3(
+    execution_engine.engine_forkchoice_updated_v3(
         fork_choice_state,
         Some(payload_attributes)
-    ).await;
+    ).await
 }

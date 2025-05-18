@@ -1,15 +1,12 @@
-use alloy_primitives::Bytes;
+use alloy_primitives::{Address, Bytes, B256};
 use ream_consensus::{
-    constants::{CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, WITHDRAWAL_REQUEST_TYPE}, 
-    execution_requests::ExecutionRequests,
-    consolidation_request::ConsolidationRequest,
-    withdrawal_request::WithdrawalRequest,
-    deposit_request::DepositRequest
+    consolidation_request::ConsolidationRequest, constants::{CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, WITHDRAWAL_REQUEST_TYPE}, deposit_request::DepositRequest, execution_engine, execution_payload::PayloadAttributesV3, execution_requests::ExecutionRequests, fork_choice, withdrawal::Withdrawal, withdrawal_request::WithdrawalRequest
 };
-use serde_yaml::with;
+use ream_consensus::electra::beacon_state::BeaconState;
 use ssz_types::VariableList;
 use ssz::Decode;
 use anyhow::{ Result, anyhow };
+use execution_engine::ExecutionEngine;
 
 fn get_execution_requests(execution_requests_list: Vec<Bytes>) -> Result<ExecutionRequests> {
     let mut deposits: Vec<DepositRequest> = vec![];
@@ -50,4 +47,29 @@ fn get_execution_requests(execution_requests_list: Vec<Bytes>) -> Result<Executi
         }
     }
     Ok(ExecutionRequests { deposits: VariableList::from(deposits), withdrawals: VariableList::from(withdrawals), consolidations: VariableList::from(consolidations) })
+}
+
+fn async prepare_execution_payload(state: BeaconState,
+                              safe_block_hash: B256,
+                              finalized_block_hash: B256,
+                              suggested_fee_recipient: Address,
+                              execution_engine: ExecutionEngine) -> Result<Option<B64>> {
+    let parent_hash: B256 = state.latest_execution_payload_header.block_hash;
+    let execution_requests_list: Vec<Withdrawal> = state.get_expected_withdrawals()?.0;
+    let payload_attributes: PayloadAttributesV3 = PayloadAttributesV3 {
+        timestamp: state.compute_timestamp_at_slot(state.slot),
+        prev_randao: state.get_randao_mix(state.get_current_epoch()),
+        suggested_fee_recipient: suggested_fee_recipient,
+        withdrawals: VariableList::from(execution_requests_list),
+        parent_beacon_block_root: state.latest_block_header.tree_hash_root(),
+    };
+    let fork_choice_state = ForkchoiceStateV1 {
+        head_block_hash: parent_hash,
+        safe_block_hash: safe_block_hash,
+        finalized_block_hash: finalized_block_hash,
+    };
+    return execution_engine.engine_forkchoice_updated_v3(
+        fork_choice_state,
+        Some(payload_attributes)
+    )
 }

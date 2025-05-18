@@ -5960,10 +5960,13 @@ dependencies = [
  "ethereum_ssz",
  "ethereum_ssz_derive",
  "ream-consensus",
+ "ream-execution-engine",
  "serde",
  "serde_json",
  "serde_yaml",
  "ssz_types",
+ "tree_hash",
+ "tree_hash_derive",
 ]
 
 [[package]]

@@ -1,9 +1,13 @@
+use std::time::Duration;
+
 use anyhow::{Result, anyhow};
 use ream_consensus_lean::state::LeanState;
 use ream_consensus_misc::constants::lean::VALIDATOR_REGISTRY_LIMIT;
 use reqwest::{Client, StatusCode, Url};
 use ssz::Decode;
 use tracing::warn;
+
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Default)]
 pub struct LeanCheckpointClient {
@@ -14,6 +18,7 @@ impl LeanCheckpointClient {
     pub fn new() -> Self {
         Self {
             http: Client::builder()
+                .timeout(DEFAULT_TIMEOUT)
                 .build()
                 .expect("Failed to build HTTP client"),
         }
